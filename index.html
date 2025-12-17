@@ -2,7 +2,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Happy Birthday Eldod 🎂</title>
+  <title>🎂 Eldod Sweet 16 — 3D Birthday Experience</title>
   <style>
     html, body { margin:0; padding:0; overflow:hidden; background:#05050a; font-family: 'Segoe UI', sans-serif; }
     #ui {
@@ -63,6 +63,7 @@ function init(){
   scene.add(key);
 
   // Ground glow
+  // Ground platform
   const floor = new THREE.Mesh(
     new THREE.CircleGeometry(8,64),
     new THREE.MeshStandardMaterial({ color:'#0a0a15', emissive:'#001122' })
@@ -103,14 +104,14 @@ function createCake(){
     cakeGroup.add(frosting);
   },2000);
 
-  // Engraved name (simple 3D text block placeholder)
+  // Engraved name (raised gold plate)
   setTimeout(()=>{
-    const name = new THREE.Mesh(
-      new THREE.BoxGeometry(2,.3,.2),
-      new THREE.MeshStandardMaterial({ color:'#ffd700' })
+    const plate = new THREE.Mesh(
+      new THREE.RoundedBoxGeometry(2.2,.5,.25,6,.08),
+      new THREE.MeshStandardMaterial({ color:'#d4af37', metalness:.7, roughness:.2 })
     );
-    name.position.set(0,1.2,2.4);
-    cakeGroup.add(name);
+    plate.position.set(0,1.25,2.45);
+    cakeGroup.add(plate);
   },2600);
 
   // Candles 1 and 6
@@ -146,6 +147,15 @@ window.addEventListener('pointermove', e=>{
   const x = (e.clientX / innerWidth - .5) * 6;
   const y = -(e.clientY / innerHeight - .5) * 4 + 2;
   torch.position.set(x,y,4);
+});
+
+// Mobile gyro support
+window.addEventListener('deviceorientation', e=>{
+  if(!torch) return;
+  const x = (e.gamma || 0) * 0.05;
+  const y = 2 + (e.beta || 0) * 0.03;
+  torch.position.set(x,y,4);
+});
 });
 
 function animate(){
