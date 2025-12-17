@@ -1,219 +1,308 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>🎂 Eldod Sweet 16 — 3D Birthday</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Eldod's VIP 16th</title>
+    <style>
+        body { margin: 0; overflow: hidden; background: #0f172a; font-family: 'Arial Black', sans-serif; touch-action: none; }
+        
+        #ui-container {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            pointer-events: none; z-index: 10;
+            display: flex; flex-direction: column; align-items: center;
+        }
 
-  <style>
-    html, body {
-      margin: 0;
-      padding: 0;
-      overflow: hidden;
-      background: #05050a;
-      font-family: 'Segoe UI', sans-serif;
-    }
+        .header-text {
+            margin-top: 5vh;
+            text-align: center;
+            opacity: 0; transform: translateY(-30px); transition: opacity 2s, transform 2s;
+        }
+        
+        h1 {
+            color: #fff; font-size: clamp(1.5rem, 8vw, 3rem); margin: 0;
+            text-shadow: 0 0 15px #3b82f6, 0 0 30px #3b82f6;
+            letter-spacing: 2px;
+        }
+        h2 {
+            color: #60a5fa; font-size: clamp(1rem, 5vw, 2rem); margin: 10px 0;
+            text-shadow: 0 0 10px #60a5fa;
+        }
 
-    #ui {
-      position: fixed;
-      inset: 0;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      background: radial-gradient(circle at top, #111 0%, #05050a 60%);
-      z-index: 10;
-    }
+        #start-btn {
+            pointer-events: auto;
+            margin-top: 20vh;
+            padding: 15px 50px;
+            font-size: 1.5rem;
+            background: linear-gradient(45deg, #2563eb, #06b6d4);
+            border: none; border-radius: 30px;
+            color: white; font-weight: bold; cursor: pointer;
+            box-shadow: 0 0 25px rgba(6, 182, 212, 0.6);
+            transition: transform 0.2s;
+        }
+        #start-btn:active { transform: scale(0.95); }
 
-    #startBtn {
-      font-size: 2rem;
-      padding: 20px 40px;
-      border-radius: 20px;
-      border: none;
-      background: linear-gradient(135deg,#00f2ff,#0066ff);
-      color: white;
-      box-shadow: 0 0 40px rgba(0,200,255,.6);
-      cursor: pointer;
-    }
-
-    #textOverlay {
-      position: fixed;
-      top: 40px;
-      width: 100%;
-      text-align: center;
-      color: white;
-      pointer-events: none;
-      display: none;
-    }
-
-    h1 { font-size: 3rem; margin: 0; }
-    h2 { font-size: 1.5rem; opacity: .85; }
-
-    canvas { display: block; }
-  </style>
+        #tutorial {
+            position: absolute; bottom: 50px; width: 100%; text-align: center;
+            color: white; font-size: 1.2rem; opacity: 0; transition: opacity 1s;
+            text-shadow: 0 0 5px black;
+        }
+    </style>
 </head>
 <body>
 
-<div id="ui">
-  <button id="startBtn">🎉 START 🎉</button>
-</div>
+    <div id="ui-container">
+        <div class="header-text" id="text-area">
+            <h1>HAPPY BIRTHDAY ELDOD</h1>
+            <h2>SWEET 16</h2>
+        </div>
+        <button id="start-btn">START PARTY</button>
+        <div id="tutorial">Drag the lighter to light the candles!</div>
+    </div>
 
-<div id="textOverlay">
-  <h1>Happy Birthday Eldod 🎂</h1>
-  <h2>Sweet 16</h2>
-</div>
+    <script type="module">
+        import * as THREE from 'https://cdn.skypack.dev/three@0.132.2';
 
-<!-- ✅ SAFE NON-MODULE SCRIPT (BUTTON ALWAYS WORKS) -->
-<script>
-  const ui = document.getElementById('ui');
-  const startBtn = document.getElementById('startBtn');
-  const textOverlay = document.getElementById('textOverlay');
+        let scene, camera, renderer;
+        let lighterGroup, lighterFlame, lighterLight;
+        let cakeLayers = [], numberCandles = [], confetti = [];
+        let gameStarted = false;
+        let candlesLitCount = 0;
 
-  startBtn.addEventListener('click', () => {
-    if (window.startExperience) {
-      window.startExperience();
-    } else {
-      alert('3D engine not loaded. Please open using CodePen or Live Server.');
-    }
-  });
-</script>
+        function init() {
+            scene = new THREE.Scene();
+            scene.background = new THREE.Color(0x0f172a);
+            scene.fog = new THREE.FogExp2(0x0f172a, 0.02);
 
-<!-- ✅ THREE.JS MODULE -->
-<script type="module">
-import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.158/build/three.module.js';
-import { OrbitControls } from 'https://cdn.jsdelivr.net/npm/three@0.158/examples/jsm/controls/OrbitControls.js';
+            camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 1000);
+            camera.position.set(0, 6, 12);
+            camera.lookAt(0, 2, 0);
 
-let scene, camera, renderer, controls;
-let cakeGroup = new THREE.Group();
-let torch = null;
+            renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: "high-performance" });
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+            renderer.shadowMap.enabled = true;
+            document.body.appendChild(renderer.domElement);
 
-init();
-animate();
+            const ambient = new THREE.AmbientLight(0xffffff, 0.4);
+            scene.add(ambient);
+            const dirLight = new THREE.DirectionalLight(0xffffff, 0.8);
+            dirLight.position.set(5, 10, 5);
+            dirLight.castShadow = true;
+            scene.add(dirLight);
 
-function init() {
-  scene = new THREE.Scene();
-  scene.fog = new THREE.Fog('#05050a', 8, 25);
+            createCake();
+            createNumberCandles(); 
+            createLighter();
+            createConfetti();
 
-  camera = new THREE.PerspectiveCamera(60, innerWidth / innerHeight, 0.1, 100);
-  camera.position.set(0, 4, 10);
+            window.addEventListener('resize', onResize);
+            document.getElementById('start-btn').addEventListener('click', startGame);
+            window.addEventListener('mousemove', moveLighter);
+            window.addEventListener('touchmove', (e) => {
+                moveLighter(e.touches[0]);
+                e.preventDefault();
+            }, {passive: false});
+        }
 
-  renderer = new THREE.WebGLRenderer({ antialias: true });
-  renderer.setSize(innerWidth, innerHeight);
-  renderer.setPixelRatio(devicePixelRatio);
-  document.body.appendChild(renderer.domElement);
+        function createCake() {
+            const colors = [0x1e3a8a, 0x3b82f6, 0x93c5fd]; 
+            for(let i=0; i<3; i++) {
+                const geometry = new THREE.CylinderGeometry(3 - (i*0.5), 3 - (i*0.5), 1.5, 40);
+                const material = new THREE.MeshStandardMaterial({ color: colors[i], roughness: 0.3, metalness: 0.1 });
+                const mesh = new THREE.Mesh(geometry, material);
+                mesh.position.y = 20 + (i * 5); 
+                mesh.castShadow = true;
+                mesh.receiveShadow = true;
+                
+                const drip = new THREE.Mesh(
+                    new THREE.TorusGeometry(3 - (i*0.5), 0.1, 16, 50),
+                    new THREE.MeshStandardMaterial({ color: 0xffffff })
+                );
+                drip.rotation.x = Math.PI/2;
+                drip.position.y = 0.6;
+                mesh.add(drip);
 
-  controls = new OrbitControls(camera, renderer.domElement);
-  controls.enableDamping = true;
-  controls.enablePan = false;
+                scene.add(mesh);
+                cakeLayers.push({ mesh: mesh, targetY: i * 1.6 });
+            }
+        }
 
-  scene.add(new THREE.AmbientLight(0xffffff, 0.5));
-  const dir = new THREE.DirectionalLight(0xffffff, 1);
-  dir.position.set(5, 10, 5);
-  scene.add(dir);
+        function createNumberCandles() {
+            const waxMaterial = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.2 });
 
-  const floor = new THREE.Mesh(
-    new THREE.CircleGeometry(8, 64),
-    new THREE.MeshStandardMaterial({ color: '#0a0a15', emissive: '#001122' })
-  );
-  floor.rotation.x = -Math.PI / 2;
-  scene.add(floor);
+            // Number 1
+            const group1 = new THREE.Group();
+            const mesh1 = new THREE.Mesh(new THREE.BoxGeometry(0.3, 1.5, 0.3), waxMaterial);
+            mesh1.position.y = 0.75;
+            group1.add(mesh1);
+            setupWickAndFlame(group1, 1.6);
+            group1.position.set(-0.8, 30, 0);
+            scene.add(group1);
+            numberCandles.push({ group: group1, targetY: 4.2, lit: false });
 
-  scene.add(cakeGroup);
-}
+            // Number 6
+            const group6 = new THREE.Group();
+            const torus6 = new THREE.Mesh(new THREE.TorusGeometry(0.4, 0.15, 16, 32), waxMaterial);
+            torus6.position.y = 0.5;
+            const stem6 = new THREE.Mesh(new THREE.CylinderGeometry(0.15, 0.15, 1, 16), waxMaterial);
+            stem6.position.set(-0.35, 1, 0); stem6.rotation.z = -0.2;
+            group6.add(torus6, stem6);
+            setupWickAndFlame(group6, 1.6);
+            group6.position.set(0.8, 30, 0);
+            scene.add(group6);
+            numberCandles.push({ group: group6, targetY: 4.2, lit: false });
+        }
 
-function createCake() {
-  cakeGroup.clear();
+        function setupWickAndFlame(group, height) {
+            const isSix = group.children.length > 1;
+            const xPos = isSix ? -0.35 : 0;
 
-  const cakeMat = new THREE.MeshStandardMaterial({ color: '#5b2d16' });
-  const frostingMat = new THREE.MeshStandardMaterial({ color: '#ffffff' });
+            const wick = new THREE.Mesh(new THREE.CylinderGeometry(0.02, 0.02, 0.3), new THREE.MeshBasicMaterial({color: 0x000000}));
+            wick.position.set(xPos, height, 0);
+            group.add(wick);
 
-  for (let i = 0; i < 3; i++) {
-    const layer = new THREE.Mesh(
-      new THREE.CylinderGeometry(2.5 - i * 0.2, 2.5 - i * 0.2, 0.8, 64),
-      cakeMat
-    );
-    layer.position.y = 6;
-    cakeGroup.add(layer);
+            const flame = new THREE.Mesh(new THREE.SphereGeometry(0.15, 8, 8), new THREE.MeshBasicMaterial({ color: 0xffaa00 }));
+            flame.position.set(xPos, height + 0.2, 0);
+            flame.visible = false;
+            flame.name = "flame";
+            group.add(flame);
 
-    setTimeout(() => {
-      layer.position.y = i * 0.8;
-    }, i * 600);
-  }
+            const light = new THREE.PointLight(0xffaa00, 0, 4);
+            light.position.copy(flame.position);
+            light.name = "light";
+            group.add(light);
+        }
 
-  setTimeout(() => {
-    const frosting = new THREE.Mesh(
-      new THREE.CylinderGeometry(2.6, 2.6, 0.3, 64),
-      frostingMat
-    );
-    frosting.position.y = 2.4;
-    cakeGroup.add(frosting);
-  }, 2000);
+        function createLighter() {
+            lighterGroup = new THREE.Group();
+            const body = new THREE.Mesh(new THREE.BoxGeometry(0.8, 1.2, 0.3), new THREE.MeshStandardMaterial({ color: 0x888888, metalness: 0.9, roughness: 0.2 }));
+            lighterGroup.add(body);
+            
+            const cap = new THREE.Mesh(new THREE.BoxGeometry(0.8, 0.6, 0.3), new THREE.MeshStandardMaterial({ color: 0x888888, metalness: 0.9, roughness: 0.2 }));
+            cap.position.set(-0.5, 0.9, 0); cap.rotation.z = 0.5;
+            lighterGroup.add(cap);
 
-  setTimeout(() => {
-    const plate = new THREE.Mesh(
-      new THREE.BoxGeometry(2.2, 0.5, 0.25),
-      new THREE.MeshStandardMaterial({ color: '#d4af37', metalness: 0.7, roughness: 0.2 })
-    );
-    plate.position.set(0, 1.25, 2.45);
-    cakeGroup.add(plate);
-  }, 2600);
+            lighterFlame = new THREE.Mesh(new THREE.ConeGeometry(0.15, 0.4, 8), new THREE.MeshBasicMaterial({ color: 0x00ffff, transparent: true, opacity: 0.8 }));
+            lighterFlame.position.y = 0.8;
+            lighterGroup.add(lighterFlame);
 
-  setTimeout(() => {
-    createCandle(-0.4);
-    createCandle(0.4);
-  }, 3200);
-}
+            lighterLight = new THREE.PointLight(0x00ffff, 1, 3);
+            lighterLight.position.y = 1.0;
+            lighterGroup.add(lighterLight);
 
-function createCandle(x) {
-  const candle = new THREE.Mesh(
-    new THREE.CylinderGeometry(0.15, 0.15, 1, 32),
-    new THREE.MeshStandardMaterial({ color: '#ff3366' })
-  );
-  candle.position.set(x, 3, 0);
-  cakeGroup.add(candle);
-}
+            lighterGroup.visible = false;
+            scene.add(lighterGroup);
+        }
 
-function createTorch() {
-  torch = new THREE.Mesh(
-    new THREE.ConeGeometry(0.2, 0.6, 32),
-    new THREE.MeshStandardMaterial({ emissive: '#ff6600', color: '#331100' })
-  );
-  torch.position.set(0, 2, 4);
-  scene.add(torch);
-}
+        function createConfetti() {
+            const geo = new THREE.PlaneGeometry(0.15, 0.15);
+            for(let i=0; i<100; i++) {
+                const mat = new THREE.MeshBasicMaterial({ side: THREE.DoubleSide, color: Math.random() * 0xffffff });
+                const mesh = new THREE.Mesh(geo, mat);
+                mesh.position.set(0, -10, 0); mesh.visible = false;
+                scene.add(mesh);
+                confetti.push({ mesh: mesh, speed: 0.1 + Math.random() * 0.15, wobble: Math.random() * 10 });
+            }
+        }
 
-window.addEventListener('pointermove', e => {
-  if (!torch) return;
-  const x = (e.clientX / innerWidth - 0.5) * 6;
-  const y = -(e.clientY / innerHeight - 0.5) * 4 + 2;
-  torch.position.set(x, y, 4);
-});
+        function startGame() {
+            gameStarted = true;
+            document.getElementById('start-btn').style.display = 'none';
+            document.getElementById('text-area').style.opacity = '1';
+            document.getElementById('text-area').style.transform = 'translateY(0)';
+            setTimeout(() => { document.getElementById('tutorial').style.opacity = '1'; }, 4000);
+            setTimeout(() => { lighterGroup.visible = true; }, 3500);
+        }
 
-window.addEventListener('deviceorientation', e => {
-  if (!torch) return;
-  const x = (e.gamma || 0) * 0.05;
-  const y = 2 + (e.beta || 0) * 0.03;
-  torch.position.set(x, y, 4);
-});
+        function moveLighter(e) {
+            if (!gameStarted) return;
+            const x = (e.clientX / window.innerWidth) * 2 - 1;
+            const y = -(e.clientY / window.innerHeight) * 2 + 1;
+            lighterGroup.position.x = x * 7;
+            lighterGroup.position.y = (y * 5) + 3;
+            lighterGroup.position.z = 2;
+            
+            checkIgnition();
+        }
 
-function animate() {
-  requestAnimationFrame(animate);
-  controls.update();
-  renderer.render(scene, camera);
-}
+        function checkIgnition() {
+            numberCandles.forEach(candle => {
+                if(candle.lit) return;
+                
+                const dx = lighterGroup.position.x - candle.group.position.x;
+                const dy = lighterGroup.position.y - (candle.group.position.y + 1.5);
+                const dist = Math.sqrt(dx*dx + dy*dy);
 
-// ✅ EXPOSE START FUNCTION SAFELY
-window.startExperience = function () {
-  ui.style.display = 'none';
-  textOverlay.style.display = 'block';
-  createCake();
-  createTorch();
-};
+                if(dist < 0.9) {
+                    candle.lit = true;
+                    candle.group.getObjectByName("flame").visible = true;
+                    candle.group.getObjectByName("light").intensity = 2;
+                    candlesLitCount++;
+                    
+                    lighterFlame.material.color.setHex(0xffaa00);
+                    setTimeout(() => { lighterFlame.material.color.setHex(0x00ffff); }, 300);
 
-window.onresize = () => {
-  camera.aspect = innerWidth / innerHeight;
-  camera.updateProjectionMatrix();
-  renderer.setSize(innerWidth, innerHeight);
-};
-</script>
+                    if(candlesLitCount === 2) {
+                        document.getElementById('tutorial').innerHTML = "MAKE A WISH ELDOD!";
+                        confetti.forEach(c => { 
+                            c.mesh.visible = true; 
+                            c.mesh.position.set((Math.random()-0.5)*15, -2, (Math.random()-0.5)*10);
+                        });
+                    }
+                }
+            });
+        }
+
+        function onResize() {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        }
+
+        function animate() {
+            requestAnimationFrame(animate);
+
+            if(gameStarted) {
+                cakeLayers.forEach(l => {
+                    if(l.mesh.position.y > l.targetY) {
+                        l.mesh.position.y -= 0.15;
+                        l.mesh.rotation.y += 0.005;
+                    }
+                });
+
+                numberCandles.forEach(n => {
+                    if(n.group.position.y > n.targetY) {
+                        n.group.position.y -= 0.15;
+                    } else {
+                        n.group.position.y = n.targetY + Math.sin(Date.now() * 0.002) * 0.05;
+                    }
+
+                    if(n.lit) {
+                        const flicker = 1 + Math.random() * 0.2;
+                        n.group.getObjectByName("flame").scale.setScalar(flicker);
+                    }
+                });
+
+                if(candlesLitCount === 2) {
+                    confetti.forEach(c => {
+                        c.mesh.position.y += c.speed;
+                        c.mesh.rotation.x += 0.05;
+                        c.mesh.position.x += Math.sin(Date.now() * 0.002 + c.wobble) * 0.02;
+                        if(c.mesh.position.y > 12) c.mesh.position.y = -2;
+                    });
+                }
+            }
+
+            if(lighterGroup && lighterGroup.visible) {
+                lighterFlame.scale.y = 1 + Math.sin(Date.now() * 0.02) * 0.2;
+            }
+
+            renderer.render(scene, camera);
+        }
+
+        init();
+        animate();
+    </script>
 </body>
 </html>
