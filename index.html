@@ -1,191 +1,169 @@
-<!doctype html>
-
-<html lang="en">
+<!DOCTYPE html><html lang="en">
 <head>
-<meta charset="utf-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
-<title>🎂 Happy Birthday Eldod — Sweet 16</title><!-- Three.js --><script src="https://unpkg.com/three@0.158.0/build/three.min.js"></script><style>
-*{margin:0;padding:0;box-sizing:border-box;font-family:system-ui,Segoe UI,Arial}
-body{
-  background:radial-gradient(circle at top,#0b1a24,#000);
-  overflow:hidden;color:white
-}
-#ui{
-  position:absolute;inset:0;display:flex;flex-direction:column;
-  align-items:center;justify-content:center;text-align:center;z-index:10
-}
-button{
-  padding:16px 40px;font-size:22px;font-weight:800;
-  border:none;border-radius:40px;cursor:pointer;
-  background:linear-gradient(135deg,#00eaff,#0072ff);
-  color:black
-}
-#title{font-size:42px;margin-bottom:10px}
-#subtitle{font-size:26px;color:#00eaff}
-canvas{display:block}
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Happy Birthday Eldod 🎂</title>
+  <style>
+    html, body { margin:0; padding:0; overflow:hidden; background:#05050a; font-family: 'Segoe UI', sans-serif; }
+    #ui {
+      position:fixed; inset:0; display:flex; align-items:center; justify-content:center;
+      background: radial-gradient(circle at top, #111 0%, #05050a 60%);
+      z-index:10;
+    }
+    #startBtn {
+      font-size:2rem; padding:20px 40px; border-radius:20px; border:none;
+      background:linear-gradient(135deg,#00f2ff,#0066ff); color:white;
+      box-shadow:0 0 40px rgba(0,200,255,.6);
+      cursor:pointer;
+    }
+    #textOverlay {
+      position:fixed; top:40px; width:100%; text-align:center; color:white;
+      pointer-events:none;
+    }
+    h1 { font-size:3rem; margin:0; }
+    h2 { font-size:1.5rem; opacity:.85; }
+    canvas { display:block; }
+  </style>
+</head>
+<body><div id="ui"><button id="startBtn">🎉 START 🎉</button></div>
+<div id="textOverlay" style="display:none">
+  <h1>Happy Birthday Eldod 🎂</h1>
+  <h2>Sweet 16</h2>
+</div><script type="module">
+import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.158/build/three.module.js';
+import { OrbitControls } from 'https://cdn.jsdelivr.net/npm/three@0.158/examples/jsm/controls/OrbitControls.js';
 
-#hint{
-  position:absolute;bottom:20px;width:100%;text-align:center;
-  opacity:.7;font-size:16px;display:none
-}
-</style></head>
-<body><div id="ui">
-  <div id="title">🎉 Ready Eldod?</div>
-  <div id="subtitle">Tap START to build your cake 🎂</div>
-  <br>
-  <button id="start">START</button>
-</div>
-<div id="hint">👉 Drag the torch to light the candles</div><script>
-// Scene
-const scene = new THREE.Scene();
-scene.fog = new THREE.Fog(0x000000,5,20);
+let scene, camera, renderer, controls;
+let cakeGroup = new THREE.Group();
+let torch;
 
-const camera = new THREE.PerspectiveCamera(45,innerWidth/innerHeight,0.1,100);
-camera.position.set(0,4,9);
+init();
+animate();
 
-const renderer = new THREE.WebGLRenderer({antialias:true,alpha:true});
-renderer.setSize(innerWidth,innerHeight);
-document.body.appendChild(renderer.domElement);
+function init(){
+  scene = new THREE.Scene();
+  scene.fog = new THREE.Fog('#05050a', 8, 25);
 
-// Lights
-scene.add(new THREE.AmbientLight(0xffffff,.4));
-const light = new THREE.PointLight(0x00eaff,1.2);
-light.position.set(2,6,3);
-scene.add(light);
+  camera = new THREE.PerspectiveCamera(60, innerWidth/innerHeight, 0.1, 100);
+  camera.position.set(0,4,10);
 
-// Cake Group
-const cake = new THREE.Group();
-scene.add(cake);
+  renderer = new THREE.WebGLRenderer({ antialias:true });
+  renderer.setSize(innerWidth, innerHeight);
+  renderer.setPixelRatio(devicePixelRatio);
+  document.body.appendChild(renderer.domElement);
 
-function layer(y,color){
-  const g = new THREE.CylinderGeometry(2.2,2.2,1,64);
-  const m = new THREE.MeshStandardMaterial({color});
-  const mesh = new THREE.Mesh(g,m);
-  mesh.position.y = y+6;
-  cake.add(mesh);
-  return mesh;
-}
+  controls = new OrbitControls(camera, renderer.domElement);
+  controls.enableDamping = true;
+  controls.enablePan = false;
 
-const bottom = layer(0,0xc68642);
-const mid = layer(1,0xd9a066);
-const top = layer(2,0xf2c38b);
+  // Lights
+  scene.add(new THREE.AmbientLight(0xffffff, .5));
+  const key = new THREE.DirectionalLight(0xffffff, 1);
+  key.position.set(5,10,5);
+  scene.add(key);
 
-// Frosting
-const frost = new THREE.Mesh(
-  new THREE.CylinderGeometry(2.3,2.3,.4,64),
-  new THREE.MeshStandardMaterial({color:0xffffff})
-);
-frost.position.y = 3.2+6;
-cake.add(frost);
-
-// Text engrave
-function text3D(txt,y){
-  const canvas=document.createElement('canvas');
-  canvas.width=1024;canvas.height=256;
-  const c=canvas.getContext('2d');
-  c.fillStyle='#000';c.font='bold 120px Arial';
-  c.textAlign='center';c.textBaseline='middle';
-  c.fillText(txt,512,128);
-  const tex=new THREE.CanvasTexture(canvas);
-  const mat=new THREE.MeshStandardMaterial({map:tex,transparent:true});
-  const geo=new THREE.PlaneGeometry(3,0.8);
-  const mesh=new THREE.Mesh(geo,mat);
-  mesh.position.set(0,y,2.21);
-  cake.add(mesh);
-}
-
-text3D('E L D O D',1.2);
-text3D('SWEET 16',2.3);
-
-// Candles
-const flames=[];
-for(let i=-1.2;i<=1.2;i+=0.6){
-  const candle=new THREE.Mesh(
-    new THREE.CylinderGeometry(.08,.08,.6,16),
-    new THREE.MeshStandardMaterial({color:0xff5555})
+  // Ground glow
+  const floor = new THREE.Mesh(
+    new THREE.CircleGeometry(8,64),
+    new THREE.MeshStandardMaterial({ color:'#0a0a15', emissive:'#001122' })
   );
-  candle.position.set(i,3.8+6,0);
-  cake.add(candle);
+  floor.rotation.x = -Math.PI/2;
+  scene.add(floor);
 
-  const flame=new THREE.Mesh(
-    new THREE.SphereGeometry(.12,16,16),
-    new THREE.MeshStandardMaterial({color:0xffaa00,emissive:0xffaa00})
-  );
-  flame.position.set(i,4.2+6,0);
-  flame.visible=false;
-  cake.add(flame);
-  flames.push(flame);
+  scene.add(cakeGroup);
 }
 
-// Torch
-const torch=new THREE.Mesh(
-  new THREE.CylinderGeometry(.15,.15,1.2,16),
-  new THREE.MeshStandardMaterial({color:0x888888})
-);
-torch.position.set(-3,2,0);
-scene.add(torch);
+function createCake(){
+  cakeGroup.clear();
 
-// Animation states
-let build=false;
-let pointer={x:0,y:0};
+  const layerMat = new THREE.MeshStandardMaterial({ color:'#5b2d16' });
+  const frostingMat = new THREE.MeshStandardMaterial({ color:'#ffffff' });
+
+  // Layers fall one by one
+  for(let i=0;i<3;i++){
+    const layer = new THREE.Mesh(
+      new THREE.CylinderGeometry(2.5 - i*0.2, 2.5 - i*0.2, .8, 64),
+      layerMat
+    );
+    layer.position.y = 5 + i;
+    cakeGroup.add(layer);
+
+    setTimeout(()=>{
+      layer.position.y = i * .8;
+    }, i*600);
+  }
+
+  // Frosting
+  setTimeout(()=>{
+    const frosting = new THREE.Mesh(
+      new THREE.CylinderGeometry(2.6,2.6,.3,64),
+      frostingMat
+    );
+    frosting.position.y = 2.4;
+    cakeGroup.add(frosting);
+  },2000);
+
+  // Engraved name (simple 3D text block placeholder)
+  setTimeout(()=>{
+    const name = new THREE.Mesh(
+      new THREE.BoxGeometry(2,.3,.2),
+      new THREE.MeshStandardMaterial({ color:'#ffd700' })
+    );
+    name.position.set(0,1.2,2.4);
+    cakeGroup.add(name);
+  },2600);
+
+  // Candles 1 and 6
+  setTimeout(()=>{
+    createCandle(-.4, '1');
+    createCandle(.4, '6');
+  },3200);
+}
+
+function createCandle(x, num){
+  const candle = new THREE.Mesh(
+    new THREE.CylinderGeometry(.15,.15,1,32),
+    new THREE.MeshStandardMaterial({ color:'#ff3366' })
+  );
+  candle.position.set(x,3,0);
+  cakeGroup.add(candle);
+
+  candle.userData.lit = false;
+  candle.userData.flame = null;
+}
+
+function createTorch(){
+  torch = new THREE.Mesh(
+    new THREE.ConeGeometry(.2,.6,32),
+    new THREE.MeshStandardMaterial({ emissive:'#ff6600', color:'#331100' })
+  );
+  torch.position.set(0,2,4);
+  scene.add(torch);
+}
+
+window.addEventListener('pointermove', e=>{
+  if(!torch) return;
+  const x = (e.clientX / innerWidth - .5) * 6;
+  const y = -(e.clientY / innerHeight - .5) * 4 + 2;
+  torch.position.set(x,y,4);
+});
 
 function animate(){
   requestAnimationFrame(animate);
-
-  if(build && cake.position.y>0){
-    cake.position.y-=0.05;
-  }
-
-  torch.position.x += (pointer.x*5 - torch.position.x)*0.2;
-  torch.position.y += (pointer.y*5 - torch.position.y)*0.2;
-
-  flames.forEach(f=>{
-    if(f.position.distanceTo(torch.position)<0.5) f.visible=true;
-  });
-
+  controls.update();
   renderer.render(scene,camera);
 }
-animate();
 
-// Controls (touch + mouse)
-function move(e){
-  const x=e.touches?e.touches[0].clientX:e.clientX;
-  const y=e.touches?e.touches[0].clientY:e.clientY;
-  pointer.x=(x/innerWidth-.5)*2;
-  pointer.y=-(y/innerHeight-.5)*2+2;
-}
-window.addEventListener('mousemove',move);
-window.addEventListener('touchmove',move,{passive:false});
-
-// 🎵 Birthday Music + Beat Sync
-let audio, analyser, data;
-
-function startMusic(){
-  audio = new Audio('https://cdn.pixabay.com/audio/2023/03/28/audio_5c1c2b9b6a.mp3');
-  audio.loop = true;
-  audio.volume = 0.7;
-  audio.play();
-
-  const ctx = new (window.AudioContext||window.webkitAudioContext)();
-  const src = ctx.createMediaElementSource(audio);
-  analyser = ctx.createAnalyser();
-  analyser.fftSize = 64;
-  data = new Uint8Array(analyser.frequencyBinCount);
-  src.connect(analyser);
-  analyser.connect(ctx.destination);
-}
-
-// Start
-start.onclick=()=>{
-  document.getElementById('ui').style.display='none';
-  document.getElementById('hint').style.display='block';
-  cake.position.y=6;
-  build=true;
-  startMusic();
+// UI
+startBtn.onclick = ()=>{
+  ui.style.display='none';
+  textOverlay.style.display='block';
+  createCake();
+  createTorch();
 };
 
-onresize=()=>{
-  camera.aspect=innerWidth/innerHeight;
+window.onresize = ()=>{
+  camera.aspect = innerWidth/innerHeight;
   camera.updateProjectionMatrix();
   renderer.setSize(innerWidth,innerHeight);
 };
